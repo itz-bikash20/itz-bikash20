@@ -1,5 +1,5 @@
 - 👋 Hi, I’m @itz-bikash20
-- 👀 I’m interested in c,python,AIML and web developing 
+- 👀 I’m interested in C, Python,AIML and Web Development
 - 🌱 I’m currently learning machine learning
 - 💞️ I’m looking to collaborate on AI development
 - 📫 Reach me through me email:- bikashranjanbarik79@gmail.com/Ph no-8260900583
