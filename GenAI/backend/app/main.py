@@ -5,13 +5,10 @@ from app.database import engine
 from app.routes import user
 from fastapi.middleware.cors import CORSMiddleware
 from app.routes import chat
-from app.models.chat_history import ChatHistory
 from app.routes import documents
-from app.models.user import User
-from app.models.document import Document
 from app.routes import auth
 from app.routes import rag
-from app.models.document import Document
+
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(

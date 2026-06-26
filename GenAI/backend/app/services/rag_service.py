@@ -1,90 +1,163 @@
-from app.services.openai_service import get_ai_response
+from pathlib import Path
+import chromadb
 
-stored_chunks = []
+from app.services.embedding_service import generate_embedding
+from app.services.groq_service import get_ai_response
+
+# =====================================================
+# ChromaDB Configuration
+# =====================================================
+
+PROJECT_ROOT = Path.cwd()
+
+CHROMA_PATH = PROJECT_ROOT / "chroma_db"
+
+CHROMA_PATH.mkdir(parents=True, exist_ok=True)
+
+client = chromadb.PersistentClient(
+    path=str(CHROMA_PATH)
+)
+
+collection = client.get_or_create_collection(
+    name="documents",
+    embedding_function=None
+)
+# =====================================================
+# Chunking
+# =====================================================
+
+def chunk_text(text, chunk_size=500):
+    chunks = []
+
+    for i in range(0, len(text), chunk_size):
+        chunks.append(text[i:i + chunk_size])
+
+    return chunks
 
 
-def chunk_text(text, chunk_size=300):
+# =====================================================
+# Store Document
+# =====================================================
 
-    return [
-        text[i:i + chunk_size]
-        for i in range(0, len(text), chunk_size)
-    ]
+def store_document(text, user_id):
 
-
-def store_document(filename, text):
-
-    global stored_chunks
+    print("=" * 60)
 
     chunks = chunk_text(text)
 
-    for chunk in chunks:
 
-        stored_chunks.append(
-            {
-                "filename": filename,
-                "content": chunk
-            }
-        )
+    for idx, chunk in enumerate(chunks):
 
 
-def search_documents(question):
+        try:
 
-    results = []
+            print("Generating embedding...")
 
-    words = question.lower().split()
+            embedding = generate_embedding(chunk)
 
-    for chunk in stored_chunks:
 
-        score = sum(
-            1
-            for word in words
-            if word in chunk["content"].lower()
-        )
-
-        results.append(
-            (
-                score,
-                chunk["content"]
+            collection.add(
+                ids=[
+                    f"{user_id}_{idx}_{hash(chunk)}"
+                ],
+                documents=[
+                    chunk
+                ],
+                embeddings=[
+                    embedding
+                ],
+                metadatas=[
+                    {
+                        "user_id": user_id
+                    }
+                ]
             )
-        )
 
-    results.sort(
-        key=lambda x: x[0],
-        reverse=True
+
+        except Exception as e:
+
+            print("\nERROR OCCURRED")
+            print(type(e))
+            print(e)
+            raise
+
+    print("=" * 60)
+
+
+# =====================================================
+# Search Documents
+# =====================================================
+
+def search_documents(question, user_id):
+
+    print("=" * 60)
+
+    query_embedding = generate_embedding(question)
+
+    print("Query embedding generated")
+
+    results = collection.query(
+        query_embeddings=[
+            query_embedding
+        ],
+        n_results=5,
+        where={
+            "user_id": user_id
+        }
     )
 
-    return results[:3]
+    print("Query completed")
 
-
-def rag_answer(question):
-
-    matches = search_documents(question)
-
-    context = "\n".join(
-        [
-            chunk
-            for score, chunk in matches
-            if score > 0
-        ]
+    documents = results.get(
+        "documents",
+        []
     )
 
-    if not context:
+    if not documents:
+        return []
 
+    return documents[0]
+
+
+# =====================================================
+# RAG Answer
+# =====================================================
+
+def rag_answer(question, user_id):
+
+    contexts = search_documents(
+        question,
+        user_id
+    )
+
+    if not contexts:
         return (
-            "I could not find that information "
-            "in the uploaded documents."
+            "No relevant information found in uploaded documents."
         )
+
+    context = "\n\n".join(contexts)
 
     prompt = f"""
 You are a document assistant.
 
 Answer ONLY from the provided context.
 
+If the answer is not present, reply exactly:
+
+"Sorry coder, I can't find your answer."
+
 Context:
 {context}
 
 Question:
 {question}
+
+Answer:
 """
 
-    return get_ai_response(prompt)
+
+    response = get_ai_response(prompt)
+
+    print("Groq response received")
+
+    return response

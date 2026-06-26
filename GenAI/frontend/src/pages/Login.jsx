@@ -1,93 +1,269 @@
 import { useState } from "react";
+import { motion } from "framer-motion";
+import { Bot } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import api from "../services/api";
+import toast from "react-hot-toast";
 
+import Button from "../components/ui/Button";
+import Input from "../components/ui/Input";
+import PasswordInput from "../components/ui/PasswordInput";
+import GlassCard from "../components/ui/GlassCard";
+
+import { login } from "../api/auth";
 function Login() {
 
     const navigate = useNavigate();
 
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
+    const [formData, setFormData] = useState({
+        email: "",
+        password: "",
+        remember: false
+    });
+
+    const [loading, setLoading] = useState(false);
+
+    const handleChange = (e) => {
+
+        const { name, value, type, checked } = e.target;
+
+        setFormData((prev) => ({
+            ...prev,
+            [name]: type === "checkbox" ? checked : value
+        }));
+
+    };
 
     const handleLogin = async () => {
 
+        if (!formData.email.trim()) {
+
+            toast.error("Please enter your email");
+
+            return;
+        }
+
+        if (!formData.password.trim()) {
+
+            toast.error("Please enter your password");
+
+            return;
+        }
+
         try {
 
-            const response = await api.post(
-                "/auth/login",
-                {
-                    email,
-                    password
-                }
-            );
+            setLoading(true);
+
+            const response = await login({
+
+                email: formData.email,
+
+                password: formData.password
+
+            });
 
             localStorage.setItem(
                 "token",
-                response.data.access_token
+                response.access_token
             );
 
-            alert("Login Successful");
+            toast.success("Welcome Back!");
 
             navigate("/dashboard");
 
-        } catch (error) {
-
-            console.error(error);
-
-            alert("Invalid Credentials");
         }
+
+        catch (err) {
+
+            toast.error(
+
+                err?.response?.data?.detail ||
+
+                "Invalid Credentials"
+
+            );
+
+        }
+
+        finally {
+
+            setLoading(false);
+
+        }
+
+    };
+
+    const handleKeyDown = (e) => {
+
+        if (e.key === "Enter") {
+
+            handleLogin();
+
+        }
+
+        if (e.key === "Escape") {
+
+            setFormData({
+
+                email: "",
+
+                password: "",
+
+                remember: false
+
+            });
+
+        }
+
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-100">
 
-            <div className="bg-white shadow-xl rounded-xl p-8 w-full max-w-md">
+        <div className="login-page">
 
-                <h1 className="text-3xl font-bold text-center text-blue-600 mb-6">
-                    Enterprise GenAI
-                </h1>
+            <motion.div
 
-                <h2 className="text-xl font-semibold text-center mb-6">
-                    Login
-                </h2>
+                initial={{
+                    opacity:0,
+                    y:50
+                }}
 
-                <input
-                    type="email"
-                    placeholder="Email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full border rounded-lg p-3 mb-4"
-                />
+                animate={{
+                    opacity:1,
+                    y:0
+                }}
 
-                <input
-                    type="password"
-                    placeholder="Password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full border rounded-lg p-3 mb-4"
-                />
+                transition={{
+                    duration:.6
+                }}
 
-                <button
-                    onClick={handleLogin}
-                    className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700"
-                >
-                    Login
-                </button>
+            >
 
-                <p className="text-center mt-4">
-                    Don't have an account?
-                </p>
+                <GlassCard className="login-card">
 
-                <button
-                    onClick={() => navigate("/register")}
-                    className="w-full mt-2 border border-blue-600 text-blue-600 py-3 rounded-lg hover:bg-blue-50"
-                >
-                    Register
-                </button>
+                    <div className="login-logo">
 
-            </div>
+                        <Bot size={40}/>
+
+                    </div>
+
+                    <h1 className="login-title">
+
+                        Enterprise GenAI
+
+                    </h1>
+
+                    <p className="login-subtitle">
+
+                        AI Powered Knowledge Platform
+
+                    </p>
+
+                    <Input
+
+                        label="Email"
+
+                        name="email"
+
+                        placeholder="Enter your email"
+
+                        value={formData.email}
+
+                        onChange={handleChange}
+
+                        onKeyDown={handleKeyDown}
+
+                    />
+
+                    <PasswordInput
+
+                        label="Password"
+
+                        name="password"
+
+                        placeholder="Enter your password"
+
+                        value={formData.password}
+
+                        onChange={handleChange}
+
+                        onKeyDown={handleKeyDown}
+
+                    />
+
+                    <div className="login-options">
+
+                        <div className="checkbox-row">
+
+                            <input
+
+                                type="checkbox"
+
+                                name="remember"
+
+                                checked={formData.remember}
+
+                                onChange={handleChange}
+
+                            />
+
+                            <label>
+
+                                Remember Me
+
+                            </label>
+
+                        </div>
+
+                        <span className="forgot-password">
+
+                            Forgot Password?
+
+                        </span>
+
+                    </div>
+
+                    <Button
+
+                        loading={loading}
+
+                        onClick={handleLogin}
+
+                    >
+
+                        Login
+
+                    </Button>
+
+                    <div className="login-footer">
+
+                        Don't have an account?
+
+                        {" "}
+
+                        <span
+
+                            onClick={()=>
+
+                                navigate("/register")
+
+                            }
+
+                        >
+
+                            Register
+
+                        </span>
+
+                    </div>
+
+                </GlassCard>
+
+            </motion.div>
 
         </div>
+
     );
+
 }
+
 export default Login;

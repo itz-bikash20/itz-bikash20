@@ -62,9 +62,10 @@ async def upload_document(
     print("\nPDF CONTENT:")
     print(text)
 
+
     store_document(
-        file.filename,
-        text
+        text=text,
+        user_id=current_user.id
     )
 
     return {

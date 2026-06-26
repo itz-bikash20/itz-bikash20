@@ -6,7 +6,7 @@ from fastapi import Depends
 from app.auth.dependencies import get_current_user
 from app.database import get_db
 
-from app.services.openai_service import (
+from app.services.groq_service import (
     get_ai_response
 )
 
